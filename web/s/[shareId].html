@@ -32,6 +32,18 @@
   .gate .btn.secondary { background: #E4EAE5; color: var(--text); }
   .error-banner { background: #FDF0EE; border: 1px solid #EBCFC9; color: #C0392B; padding: 12px 16px; border-radius: 10px; font-size: 13px; }
   footer { text-align: center; color: var(--muted); font-size: 12px; padding: 16px; }
+  /* 移动端适配（方案 §6.1：输入框吸底、引用卡片抽屉式） */
+  @media (max-width: 640px) {
+    header { padding: 14px 16px; }
+    header .logo { font-size: 17px; }
+    main { margin: 12px auto; padding: 0 12px; gap: 12px; }
+    .ask-card, .meta-card, .gate { padding: 14px; }
+    .ask-form { flex-direction: column; }
+    .ask-form button { width: 100%; padding: 12px; }
+    .ask-form input { font-size: 16px; } /* 防 iOS 缩放 */
+    .gate .btn { width: 100%; }
+    .citation { margin-left: -4px; margin-right: -4px; }
+  }
 </style>
 </head>
 <body>
