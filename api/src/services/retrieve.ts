@@ -1,6 +1,8 @@
 /** 检索：向量 topK + 关键词兜底（tsvector），RRF 融合去重。 */
 
-export interface RetrievedChunk {
+import { vectorToPg } from '../lib/vector.js';
+
+interface RetrievedChunk {
   chunkId: number;
   fileId: number;
   path: string;
@@ -56,7 +58,7 @@ export async function retrieve(
        WHERE c.share_id = $1
        ORDER BY c.embedding <=> $2::vector
        LIMIT $3`,
-      [opts.shareId, JSON.stringify(opts.questionVec), vecTopK],
+      [opts.shareId, vectorToPg(opts.questionVec), vecTopK],
     );
     (vecRows as Array<{ chunkId: number; fileId: number; path: string; content: string }>)
       .forEach((r, i) => rows.push({ ...r, rank: i + 1, source: 'vec' }));

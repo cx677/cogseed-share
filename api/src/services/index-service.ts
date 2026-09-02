@@ -3,6 +3,7 @@
 import { query } from '../db/pool.js';
 import { chunkMarkdown } from './chunker.js';
 import type { Embedder } from './embedder.js';
+import { vectorToPg } from '../lib/vector.js';
 
 export interface IndexFileInput {
   shareId: string;
@@ -44,7 +45,7 @@ export async function indexShare(embedder: Embedder, shareId: string, files: Ind
       await query(
         `INSERT INTO share_chunks (share_id, file_id, chunk_index, content, embedding)
          VALUES ($1,$2,$3,$4,$5::vector)`,
-        [shareId, c.fileId, c.index, c.content, JSON.stringify(emb)],
+        [shareId, c.fileId, c.index, c.content, vectorToPg(emb)],
       );
       inserted++;
     }
