@@ -10,9 +10,9 @@ export function genShareId(len = 8): string {
   return out;
 }
 
-/** 生成邀请码（join_mode=invite 用） */
+/** 生成邀请码（join_mode=invite 用；统一大写，join 时也 toUpperCase 归一） */
 export function genInviteCode(len = 6): string {
-  return genShareId(len);
+  return genShareId(len).toUpperCase();
 }
 
 /** 访客匿名标识：浏览器指纹 → 稳定 hash（不存 PII） */

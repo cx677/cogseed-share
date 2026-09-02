@@ -144,9 +144,10 @@ export async function createInvite(shareId: string, maxUses = 1, ttlDays = 7): P
 }
 
 export async function redeemInvite(shareId: string, code: string, visitorKey: string): Promise<boolean> {
+  const normalized = code.toUpperCase();
   const invite = await queryOne<{ id: number; max_uses: number; used_count: number; expires_at: string | null }>(
-    `SELECT id, max_uses, used_count, expires_at FROM share_invites WHERE share_id = $1 AND code = $2`,
-    [shareId, code],
+    `SELECT id, max_uses, used_count, expires_at FROM share_invites WHERE share_id = $1 AND UPPER(code) = $2`,
+    [shareId, normalized],
   );
   if (!invite) return false;
   if (invite.expires_at && new Date(invite.expires_at).getTime() < Date.now()) return false;
