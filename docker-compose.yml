@@ -46,6 +46,8 @@ services:
       - "3000:3000"
     volumes:
       - ./models:/models
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     expose: ["3000"]
 
   caddy:
