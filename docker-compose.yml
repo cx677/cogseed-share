@@ -31,7 +31,7 @@ services:
       LLM_API_KEY: ${LLM_API_KEY}
       LLM_BASE_URL: ${LLM_BASE_URL}
       LLM_MODEL: ${LLM_MODEL:-deepseek-chat}
-      EMBED_PROVIDER: ${EMBED_PROVIDER:-siliconflow}
+      EMBED_PROVIDER: ${EMBED_PROVIDER:-local}
       EMBED_API_KEY: ${EMBED_API_KEY}
       EMBED_MODEL: ${EMBED_MODEL:-BAAI/bge-m3}
       EMBED_DIM: ${EMBED_DIM:-1024}
@@ -42,6 +42,8 @@ services:
       WEB_DIR: /app/web
     ports:
       - "3000:3000"
+    volumes:
+      - ./models:/models
     expose: ["3000"]
 
   caddy:

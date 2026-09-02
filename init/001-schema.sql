@@ -38,7 +38,7 @@ CREATE TABLE share_chunks (
   file_id       bigint REFERENCES share_files(id) ON DELETE CASCADE,
   chunk_index   int NOT NULL,
   content       text NOT NULL,
-  embedding     vector(1024)
+  embedding     vector(512)
 );
 CREATE INDEX idx_chunks_share ON share_chunks(share_id);
 CREATE INDEX ON share_chunks USING hnsw (embedding vector_cosine_ops) WITH (m=16, ef_construction=64);

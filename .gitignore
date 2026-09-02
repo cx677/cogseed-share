@@ -4,3 +4,5 @@ dist/
 db/
 *.log
 .DS_Store
+models/
+api/local_cache/

@@ -27,10 +27,10 @@ export function loadConfig(): AppConfig {
       model: process.env.LLM_MODEL ?? 'deepseek-chat',
     },
     embed: {
-      provider: (process.env.EMBED_PROVIDER ?? 'siliconflow') as AppConfig['embed']['provider'],
+      provider: (process.env.EMBED_PROVIDER ?? 'local') as AppConfig['embed']['provider'],
       apiKey: process.env.EMBED_API_KEY ?? '',
       model: process.env.EMBED_MODEL ?? 'BAAI/bge-m3',
-      dim: Number(process.env.EMBED_DIM ?? 1024),
+      dim: Number(process.env.EMBED_DIM ?? 512),
     },
     rateLimit: {
       max: Number(process.env.RATE_LIMIT_MAX ?? 10),
