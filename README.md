@@ -13,6 +13,12 @@ CogSeed 共享知识库后端（方案 C）：把 CogSeed 空间发布为公网�
 
 Node 20 + TypeScript + Fastify + Postgres 16 + pgvector + DeepSeek + 硅基流动/本地 BGE embedding + Caddy（自动 HTTPS）
 
+## 状态
+
+- ✅ **已推送到 GitHub**：https://github.com/cx677/cogseed-share（公开，暂存个人名下，待迁移 bonc-ai org）
+- ✅ 本地 docker 全栈验证通过（发布 / 权限透传 / 成员申请审核 / Web 问答页）
+- ⏳ 真实部署待办：VPS + 域名 + 真实 DeepSeek key + Embedding key（见 §部署清单）
+
 ## 快速开始
 
 ```bash
