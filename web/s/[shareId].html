@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CogSeed 共享知识库</title>
+<style>
+  :root { --brand: #0E9F6E; --brand-dark: #0B7A52; --bg: #F6F9F7; --card: #fff; --text: #14281E; --muted: #6B7F73; --border: #E4EAE5; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; }
+  header { background: linear-gradient(135deg, var(--brand), #0B7A52); color: #fff; padding: 18px 24px; display: flex; align-items: center; gap: 12px; }
+  header .logo { font-size: 20px; font-weight: 700; }
+  header .badge { background: rgba(255,255,255,.2); padding: 3px 10px; border-radius: 12px; font-size: 12px; }
+  main { flex: 1; max-width: 760px; width: 100%; margin: 24px auto; padding: 0 16px; display: flex; flex-direction: column; gap: 16px; }
+  .meta-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 18px 20px; }
+  .meta-card h1 { font-size: 18px; margin-bottom: 6px; }
+  .meta-card .sub { color: var(--muted); font-size: 13px; }
+  .ask-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 18px 20px; }
+  .ask-form { display: flex; gap: 10px; }
+  .ask-form input { flex: 1; padding: 12px 14px; border: 1px solid var(--border); border-radius: 10px; font-size: 14px; outline: none; }
+  .ask-form input:focus { border-color: var(--brand); }
+  .ask-form button { padding: 12px 22px; border: 0; border-radius: 10px; background: var(--brand); color: #fff; font-size: 14px; font-weight: 600; cursor: pointer; }
+  .ask-form button:disabled { opacity: .6; cursor: default; }
+  .answer { margin-top: 16px; white-space: pre-wrap; line-height: 1.8; font-size: 14px; display: none; }
+  .answer.show { display: block; }
+  .citation { margin-top: 12px; border-left: 3px solid var(--brand); background: #F0F7F3; padding: 8px 12px; border-radius: 0 8px 8px 0; font-size: 12px; color: var(--muted); }
+  .gate { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 28px 24px; text-align: center; }
+  .gate h2 { margin-bottom: 12px; font-size: 17px; }
+  .gate p { color: var(--muted); font-size: 13px; margin-bottom: 16px; }
+  .gate input, .gate textarea { width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 10px; font-size: 13px; }
+  .gate .btn { padding: 10px 26px; border: 0; border-radius: 10px; background: var(--brand); color: #fff; font-weight: 600; cursor: pointer; font-size: 14px; }
+  .gate .btn.secondary { background: #E4EAE5; color: var(--text); }
+  .error-banner { background: #FDF0EE; border: 1px solid #EBCFC9; color: #C0392B; padding: 12px 16px; border-radius: 10px; font-size: 13px; }
+  footer { text-align: center; color: var(--muted); font-size: 12px; padding: 16px; }
+</style>
+</head>
+<body>
+<header>
+  <span class="logo">📚 CogSeed 共享知识库</span>
+  <span class="badge" id="share-badge">访客</span>
+</header>
+<main id="main"></main>
+<footer>CogSeed 共享知识库 · 由 CogSeed 客户端发布</footer>
+<script>
+  const shareId = location.pathname.split('/').filter(Boolean).pop() || '';
+  const main = document.getElementById('main');
+  const badge = document.getElementById('share-badge');
+
+  async function api(path, opts = {}) {
+    const res = await fetch(path, { headers: { 'Content-Type': 'application/json' }, ...opts });
+    return res.json();
+  }
+
+  function esc(s) { const d = document.createElement('div'); d.textContent = s ?? ''; return d.innerHTML; }
+
+  async function load() {
+    const meta = await api(`/api/v1/shares/${shareId}`);
+    if (!meta.ok) {
+      main.innerHTML = `<div class="error-banner">该分享不存在或已失效。</div>`;
+      return;
+    }
+    const s = meta.share;
+    document.title = `${s.name} - CogSeed 共享知识库`;
+    renderGate(s);
+  }
+
+  // 根据 join_mode + 访客状态决定展示申请/邀请/直接进入
+  async function renderGate(s) {
+    badge.textContent = s.joinMode === 'apply' ? '需申请' : s.joinMode === 'invite' ? '仅邀请' : '访客';
+    const status = s.joinMode === 'direct' ? 'approved'
+      : (await api(`/api/v1/shares/${shareId}/apply/status`).catch(() => ({ status: 'none' }))).status;
+
+    if (status === 'approved') {
+      renderAsk(s);
+      return;
+    }
+    if (status === 'pending') {
+      main.innerHTML = `<div class="gate"><h2>申请已提交</h2><p>管理员审核通过后即可访问，请稍后刷新。</p></div>`;
+      return;
+    }
+    if (s.joinMode === 'apply') {
+      main.innerHTML = `<div class="gate">
+        <h2>申请加入「${esc(s.name)}」</h2>
+        <p>此知识库需要管理员批准后才能查看和提问。</p>
+        <input id="g-name" placeholder="你的昵称或邮箱">
+        <textarea id="g-note" rows="2" placeholder="申请理由（可选）"></textarea>
+        <button class="btn" onclick="submitApply()">提交申请</button>
+      </div>`;
+    } else if (s.joinMode === 'invite') {
+      main.innerHTML = `<div class="gate">
+        <h2>此知识库仅限邀请</h2>
+        <p>请输入邀请码加入。</p>
+        <input id="g-code" placeholder="邀请码">
+        <button class="btn" onclick="submitInvite()">加入</button>
+      </div>`;
+    } else {
+      renderAsk(s);
+    }
+  }
+
+  async function submitApply() {
+    const name = document.getElementById('g-name').value.trim();
+    const note = document.getElementById('g-note').value.trim();
+    if (!name) { alert('请填写昵称或邮箱'); return; }
+    const r = await api(`/api/v1/shares/${shareId}/apply`, { method: 'POST', body: JSON.stringify({ displayName: name, note }) });
+    if (r.ok) { document.querySelector('.gate').innerHTML = `<h2>申请已提交</h2><p>管理员审核通过后即可访问，请稍后刷新。</p>`; }
+    else alert('提交失败：' + (r.error || '未知错误'));
+  }
+
+  async function submitInvite() {
+    const code = document.getElementById('g-code').value.trim();
+    if (!code) { alert('请输入邀请码'); return; }
+    const r = await api(`/api/v1/shares/${shareId}/join`, { method: 'POST', body: JSON.stringify({ code }) });
+    if (r.ok) { load(); } else { alert('邀请码无效或已过期'); }
+  }
+
+  function renderAsk(s) {
+    const canView = s.memberPermission !== 'hidden';
+    if (!canView) {
+      main.innerHTML = `<div class="gate"><h2>内容不可查看</h2><p>该知识库设置为「成员不可查看」。</p></div>`;
+      return;
+    }
+    main.innerHTML = `
+      <div class="meta-card">
+        <h1>${esc(s.name)}</h1>
+        <div class="sub">${s.fileCount} 个文档 · ${s.memberPermission === 'view_only' ? '仅可查看（不可导出）' : '可查看和导出'}</div>
+      </div>
+      <div class="ask-card">
+        <div class="ask-form">
+          <input id="q" placeholder="向知识库提问…" autocomplete="off">
+          <button id="ask-btn" onclick="ask()">提问</button>
+        </div>
+        <div class="answer" id="answer"></div>
+        <div id="citations"></div>
+      </div>`;
+  }
+
+  async function ask() {
+    const q = document.getElementById('q').value.trim();
+    if (!q) return;
+    const answer = document.getElementById('answer');
+    const cites = document.getElementById('citations');
+    const btn = document.getElementById('ask-btn');
+    answer.className = 'answer show';
+    answer.textContent = '';
+    cites.innerHTML = '';
+    btn.disabled = true;
+
+    // SSE 流式
+    const res = await fetch(`/api/v1/shares/${shareId}/ask`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ question: q }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      if (res.status === 403) {
+        answer.textContent = '需要先加入此知识库才能提问。';
+        setTimeout(load, 1200);
+      } else {
+        answer.textContent = '提问失败：' + (err.error || res.status);
+      }
+      btn.disabled = false;
+      return;
+    }
+    if (res.headers.get('content-type')?.includes('application/json')) {
+      const body = await res.json();
+      answer.textContent = body.answer || '';
+      renderCitations(body.citations);
+      btn.disabled = false;
+      return;
+    }
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buf = '';
+    let finalCitations = null;
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += decoder.decode(value, { stream: true });
+      let nl;
+      while ((nl = buf.indexOf('\n')) >= 0) {
+        const line = buf.slice(0, nl).trim();
+        buf = buf.slice(nl + 1);
+        if (!line.startsWith('data:')) continue;
+        const payload = line.slice(5).trim();
+        try {
+          const evt = JSON.parse(payload);
+          if (evt.delta) answer.textContent += evt.delta;
+          if (evt.done) { finalCitations = evt.citations; }
+          if (evt.error) answer.textContent += '\n[错误] ' + evt.error;
+        } catch { /* ignore */ }
+      }
+    }
+    if (finalCitations) renderCitations(finalCitations);
+    btn.disabled = false;
+  }
+
+  function renderCitations(citations) {
+    const cites = document.getElementById('citations');
+    if (!cites || !citations?.length) return;
+    cites.innerHTML = citations.map((c) =>
+      `<div class="citation">📄 ${esc(c.path)}<br>${esc(c.snippet)}</div>`).join('');
+  }
+
+  load();
+</script>
+</body>
+</html>

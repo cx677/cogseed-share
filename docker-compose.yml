@@ -1,0 +1,59 @@
+# cogseed-share 后端编排（方案 C 起步档：db + api + caddy）
+# 用法：cp .env.example .env 填密钥 → docker compose up -d --build
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: cogseed
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: cogseed_share
+    volumes:
+      - ./db:/var/lib/postgresql/data
+      - ./init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cogseed"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: api/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db: { condition: service_healthy }
+    environment:
+      DATABASE_URL: postgres://cogseed:${POSTGRES_PASSWORD}@db:5432/cogseed_share
+      ADMIN_API_KEYS: ${ADMIN_API_KEYS}
+      MANAGE_TOKEN_SECRET: ${MANAGE_TOKEN_SECRET}
+      LLM_API_KEY: ${LLM_API_KEY}
+      LLM_BASE_URL: ${LLM_BASE_URL}
+      LLM_MODEL: ${LLM_MODEL:-deepseek-chat}
+      EMBED_PROVIDER: ${EMBED_PROVIDER:-siliconflow}
+      EMBED_API_KEY: ${EMBED_API_KEY}
+      EMBED_MODEL: ${EMBED_MODEL:-BAAI/bge-m3}
+      EMBED_DIM: ${EMBED_DIM:-1024}
+      RATE_LIMIT_MAX: ${RATE_LIMIT_MAX:-10}
+      RATE_LIMIT_WINDOW_MS: ${RATE_LIMIT_WINDOW_MS:-60000}
+      DAILY_LLM_BUDGET_YUAN: ${DAILY_LLM_BUDGET_YUAN:-5}
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-https://share.cogseed.dev}
+      WEB_DIR: /app/web
+    ports:
+      - "3000:3000"
+    expose: ["3000"]
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports: ["80:80", "443:443"]
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on: [api]
+
+volumes:
+  caddy_data:
+  caddy_config:

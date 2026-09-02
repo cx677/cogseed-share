@@ -1,0 +1,4 @@
+share.cogseed.dev {
+    reverse_proxy api:3000
+    encode gzip
+}
