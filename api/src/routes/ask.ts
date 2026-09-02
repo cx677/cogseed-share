@@ -80,6 +80,17 @@ export function registerAskRoute(app: FastifyInstance, cfg: AppConfig): void {
       console.error(`[ask] embed/retrieve failed: ${(err as Error).message}`);
     }
 
+    // 检索为空：明确提示（索引未就绪或内容无匹配）
+    if (chunks.length === 0) {
+      reply.send({
+        ok: true,
+        degraded: 'no_index',
+        answer: '知识库内容尚未索引完成或没有匹配的内容，暂时无法回答。请稍后重试（若刚发布，索引可能需要几秒）。',
+        citations: [],
+      });
+      return;
+    }
+
     // 预算护栏：每日 LLM 消耗估算（按问答数粗算；正式按 token 需接计费接口）
     const budgetRow = await queryOne<{ n: string }>(
       `SELECT count(*)::text AS n FROM share_questions WHERE share_id = $1 AND answered_at > now() - interval '1 day'`,
@@ -127,7 +138,11 @@ export function registerAskRoute(app: FastifyInstance, cfg: AppConfig): void {
         reply.raw.write(`data: ${JSON.stringify({ delta })}\n\n`);
       }
     } catch (err) {
-      reply.raw.write(`data: ${JSON.stringify({ error: (err as Error).message })}\n\n`);
+      const raw = (err as Error).message;
+      const friendly = /401|Authentication|invalid.*key|api key/i.test(raw)
+        ? '问答服务配置异常（LLM 密钥无效），请联系知识库管理员。'
+        : `回答生成失败：${raw.slice(0, 120)}`;
+      reply.raw.write(`data: ${JSON.stringify({ error: friendly })}\n\n`);
     }
 
     // 引用
